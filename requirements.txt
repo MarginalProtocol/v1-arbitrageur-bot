@@ -1,0 +1,2 @@
+eth-ape==0.7.1
+silverback[dev]==0.3.0
