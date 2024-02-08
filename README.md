@@ -1,6 +1,6 @@
 # v1-arbitrageur-bot
 
-Pair arbitrageur bot that arbitrages between Marginal v1 and Uniswap v3 pools.
+Pair arbitrageur bot that arbitrages between [Marginal v1](https://github.com/MarginalProtocol/v1-core) and [Uniswap v3](https://github.com/uniswap/v3-core) pools.
 
 ## Installation
 
