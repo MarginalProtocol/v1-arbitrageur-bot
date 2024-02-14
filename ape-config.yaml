@@ -35,6 +35,12 @@ foundry:
         upstream_provider: alchemy
 
 dependencies:
+  - name: marginal-v1-core
+    github: MarginalProtocol/v1-core
+    ref: v1.0.0-rc.4
   - name: marginal-v1-periphery
     github: MarginalProtocol/v1-periphery
     ref: v1.0.0-beta.10
+
+solidity:
+  via_ir: true

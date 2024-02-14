@@ -23,14 +23,16 @@ ape plugins install .
 ## Usage
 
 Include the environment variable for the address of the [`PairArbitrageur`](https://github.com/MarginalProtocol/v1-periphery/blob/main/contracts/examples/PairArbitrageur.sol) example contract
+and the [Marginal v1 pool](https://github.com/MarginalProtocol/v1-core/blob/main/contracts/MarginalV1Pool.sol) address you wish to watch
 
 ```sh
-export CONTRACT_ADDRESS_PAIR_ARBITRAGEUR=<address of contract on network>
+export CONTRACT_ADDRESS_PAIR_ARBITRAGEUR=<address of arb contract on network>
+export CONTRACT_ADDRESS_MRGLV1_POOL=<address of mrglv1 pool contract on network>
 ```
 
 Then run silverback
 
 
 ```sh
-silverback run "main:app" --network :mainnet:alchemy
+silverback run "main:app" --network :mainnet:alchemy --account acct-name
 ```
