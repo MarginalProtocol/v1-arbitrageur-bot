@@ -22,8 +22,8 @@ ape plugins install .
 
 ## Usage
 
-Include the environment variable for the address of the [`PairArbitrageur`](https://github.com/MarginalProtocol/v1-periphery/blob/main/contracts/examples/PairArbitrageur.sol) example contract
-and the address of the [`MarginalV1Pool`](https://github.com/MarginalProtocol/v1-core/blob/main/contracts/MarginalV1Pool.sol) you wish to watch
+Include the environment variable for the address of the [`PairArbitrageur`](https://github.com/MarginalProtocol/book/blob/main/src/v1/periphery/contracts/examples/PairArbitrageur.sol/contract.PairArbitrageur.md) example contract
+and the address of the [`MarginalV1Pool`](https://github.com/MarginalProtocol/book/blob/main/src/v1/core/contracts/MarginalV1Pool.sol/contract.MarginalV1Pool.md) you wish to watch
 
 ```sh
 export CONTRACT_ADDRESS_PAIR_ARBITRAGEUR=<address of arb contract on network>
