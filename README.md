@@ -22,6 +22,15 @@ ape plugins install .
 
 ## Usage
 
+Include the environment variable for the address of the [`PairArbitrageur`](https://github.com/MarginalProtocol/v1-periphery/blob/main/contracts/examples/PairArbitrageur.sol) example contract
+
+```sh
+export CONTRACT_ADDRESS_PAIR_ARBITRAGEUR=<address of contract on network>
+```
+
+Then run silverback
+
+
 ```sh
 silverback run "main:app" --network :mainnet:alchemy
 ```
