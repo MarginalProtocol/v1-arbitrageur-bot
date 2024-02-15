@@ -16,7 +16,47 @@ mrglv1_pool = Contract(os.environ["CONTRACT_ADDRESS_MRGLV1_POOL"])
 univ3_pool = Contract(mrglv1_pool.oracle())
 
 # Price diff above which execute arbitrage
-SQRT_PRICE_TOL = os.environ.get("SQRT_PRICE_TOLERANCE", 5e-3)  # default to > 50 bps
+SQRT_PRICE_TOL = os.environ.get(
+    "SQRT_PRICE_TOLERANCE", 25e-4
+)  # default to > 50 bps in price
+
+# Slippage limits when execute arbitrage
+# TODO: SQRT_PRICE_SLIPPAGE = os.environ.get("SQRT_PRICE_SLIPPAGE", 0)
+
+# Amount out minimum premium in ETH less gas costs
+AMOUNT_OUT_MIN_ETH = os.environ.get("AMOUNT_OUT_MIN_ETH", 0)
+
+# Seconds until deadline from last block handled
+SECONDS_TIL_DEADLINE = os.environ.get("SECONDS_TIL_DEADLINE", 600)  # 10 min
+
+
+# Gets amount out min accounting for potential gas fees
+def _get_amount_out_min(
+    block: BlockAPI, context: Annotated[Context, TaskiqDepends()]
+) -> int:
+    # build the hypothetical txn to check gas cost for
+    params = (
+        context.state.token0,
+        context.state.token1,
+        context.state.maintenance,
+        context.state.oracle,
+        app.signer.address,
+        context.state.WETH9,
+        0,
+        0,  # TODO: sqrt price limit0
+        0,  # TODO: sqrt price limit1
+        2**256 - 1,
+        True,
+    )
+    gas_cost = arbitrageur.execute.estimate_gas_cost(params, sender=app.signer)
+
+    # min is min profit in ETH + gas cost estimate
+    return AMOUNT_OUT_MIN_ETH + gas_cost
+
+
+# Gets the desired timestamp deadline for arbitrage execution
+def _get_deadline(block: BlockAPI, context: Annotated[Context, TaskiqDepends()]):
+    return block.timestamp + SECONDS_TIL_DEADLINE
 
 
 @app.on_startup()
@@ -55,6 +95,8 @@ def exec_block(block: BlockAPI, context: Annotated[Context, TaskiqDepends()]):
 
     r = univ3_sqrt_price_x96 / mrglv1_sqrt_price_x96 - 1
     if abs(r) > SQRT_PRICE_TOL:
+        amount_out_min = _get_amount_out_min(block, context)
+        deadline = _get_deadline(block, context)
         params = (
             context.state.token0,
             context.state.token1,
@@ -62,10 +104,10 @@ def exec_block(block: BlockAPI, context: Annotated[Context, TaskiqDepends()]):
             context.state.oracle,
             app.signer.address,
             context.state.WETH9,
-            0,  # TODO: amount_out_min
+            amount_out_min,
             0,  # TODO: sqrt price limit0
             0,  # TODO: sqrt price limit1
-            2**256 - 1,  # TODO: deadline,
+            deadline,
             True,
         )
         arbitrageur.execute(params, sender=app.signer)  # TODO: try catch if errors
