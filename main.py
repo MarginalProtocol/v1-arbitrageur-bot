@@ -1,8 +1,10 @@
+import click
 import os
 from typing import Annotated  # NOTE: Only Python 3.9+
 
 from ape import chain, Contract
 from ape.api import BlockAPI
+from ape.exceptions import ContractLogicError
 from taskiq import Context, TaskiqDepends, TaskiqState
 
 from silverback import SilverbackApp, SilverbackStartupState
@@ -23,35 +25,14 @@ SQRT_PRICE_TOL = os.environ.get(
 # Slippage limits when execute arbitrage
 # TODO: SQRT_PRICE_SLIPPAGE = os.environ.get("SQRT_PRICE_SLIPPAGE", 0)
 
-# Amount out minimum premium in ETH less gas costs
+# Amount out minimum premium in ETH before gas costs
 AMOUNT_OUT_MIN_ETH = os.environ.get("AMOUNT_OUT_MIN_ETH", 0)
 
 # Seconds until deadline from last block handled
 SECONDS_TIL_DEADLINE = os.environ.get("SECONDS_TIL_DEADLINE", 600)  # 10 min
 
-
-# Gets amount out min accounting for potential gas fees
-def _get_amount_out_min(
-    block: BlockAPI, context: Annotated[Context, TaskiqDepends()]
-) -> int:
-    # build the hypothetical txn to check gas cost for
-    params = (
-        context.state.token0,
-        context.state.token1,
-        context.state.maintenance,
-        context.state.oracle,
-        app.signer.address,
-        context.state.WETH9,
-        0,
-        0,  # TODO: sqrt price limit0
-        0,  # TODO: sqrt price limit1
-        2**256 - 1,
-        True,
-    )
-    gas_cost = arbitrageur.execute.estimate_gas_cost(params, sender=app.signer)
-
-    # min is min profit in ETH + gas cost estimate
-    return AMOUNT_OUT_MIN_ETH + gas_cost
+# Whether to execute txn even if potentially not profitable
+IGNORE_GAS_COSTS = os.environ.get("IGNORE_GAS_COSTS", True)
 
 
 # Gets the desired timestamp deadline for arbitrage execution
@@ -92,10 +73,14 @@ def exec_block(block: BlockAPI, context: Annotated[Context, TaskiqDepends()]):
     # execute arb if price differences beyond tolerance
     univ3_sqrt_price_x96 = univ3_pool.slot0().sqrtPriceX96
     mrglv1_sqrt_price_x96 = mrglv1_pool.state().sqrtPriceX96
-
     r = univ3_sqrt_price_x96 / mrglv1_sqrt_price_x96 - 1
+
+    click.echo(f"Uniswap v3 sqrt price X96: {univ3_sqrt_price_x96}")
+    click.echo(f"Marginal v1 sqrt price X96: {mrglv1_sqrt_price_x96}")
+    click.echo(f"Relative difference in sqrt price X96 values: {r}")
+
     if abs(r) > SQRT_PRICE_TOL:
-        amount_out_min = _get_amount_out_min(block, context)
+        amount_out_min = AMOUNT_OUT_MIN_ETH
         deadline = _get_deadline(block, context)
         params = (
             context.state.token0,
@@ -110,8 +95,29 @@ def exec_block(block: BlockAPI, context: Annotated[Context, TaskiqDepends()]):
             deadline,
             True,
         )
-        arbitrageur.execute(params, sender=app.signer)  # TODO: try catch if errors
-        context.state.arb_count += 1
+
+        click.echo(f"Submitting arbitrage transaction with params: {params}")
+
+        # preview before sending in case of revert
+        try:
+            # TODO: fix this as txn_cost on base is gas units?
+            txn_cost = arbitrageur.execute.estimate_gas_cost(params, sender=app.signer)
+
+            click.echo(f"Txn cost to execute arbitrage: {txn_cost}")
+            click.echo(
+                f"Amount out min profitable less gas fees?: {AMOUNT_OUT_MIN_ETH >= txn_cost}"
+            )
+
+            # only do arb if profitable less gas costs
+            if IGNORE_GAS_COSTS or amount_out_min >= txn_cost:
+                arbitrageur.execute(params, sender=app.signer)
+                context.state.arb_count += 1
+        except ContractLogicError as err:
+            click.secho(
+                f"Contract logic error when estimating gas: {err}",
+                blink=True,
+                bold=True,
+            )
 
     context.state.block_count += 1
     context.state.signer_balance = app.signer.balance
