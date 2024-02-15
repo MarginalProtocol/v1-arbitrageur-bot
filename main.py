@@ -31,9 +31,6 @@ AMOUNT_OUT_MIN_ETH = os.environ.get("AMOUNT_OUT_MIN_ETH", 0)
 # Seconds until deadline from last block handled
 SECONDS_TIL_DEADLINE = os.environ.get("SECONDS_TIL_DEADLINE", 600)  # 10 min
 
-# Whether to execute txn even if potentially not profitable
-IGNORE_GAS_COSTS = os.environ.get("IGNORE_GAS_COSTS", True)
-
 
 # Gets the desired timestamp deadline for arbitrage execution
 def _get_deadline(block: BlockAPI, context: Annotated[Context, TaskiqDepends()]):
@@ -100,18 +97,12 @@ def exec_block(block: BlockAPI, context: Annotated[Context, TaskiqDepends()]):
 
         # preview before sending in case of revert
         try:
-            # TODO: fix this as txn_cost on base is gas units?
-            txn_cost = arbitrageur.execute.estimate_gas_cost(params, sender=app.signer)
+            # TODO: fix this to calculate txn cost in ETH?
+            arbitrageur.execute.estimate_gas_cost(params, sender=app.signer)
 
-            click.echo(f"Txn cost to execute arbitrage: {txn_cost}")
-            click.echo(
-                f"Amount out min profitable less gas fees?: {AMOUNT_OUT_MIN_ETH >= txn_cost}"
-            )
-
-            # only do arb if profitable less gas costs
-            if IGNORE_GAS_COSTS or amount_out_min >= txn_cost:
-                arbitrageur.execute(params, sender=app.signer)
-                context.state.arb_count += 1
+            # TODO: factor in gas costs ...
+            arbitrageur.execute(params, sender=app.signer)
+            context.state.arb_count += 1
         except ContractLogicError as err:
             click.secho(
                 f"Contract logic error when estimating gas: {err}",
