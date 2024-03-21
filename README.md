@@ -27,7 +27,7 @@ and the address of the [`MarginalV1Pool`](https://github.com/MarginalProtocol/bo
 
 ```sh
 export CONTRACT_ADDRESS_PAIR_ARBITRAGEUR=<address of arb contract on network>
-export CONTRACT_ADDRESS_MRGLV1_POOL=<address of mrglv1 pool contract on network>
+export CONTRACT_ADDRESS_MARGV1_POOL=<address of marginal v1 pool contract on network>
 ```
 
 Then run silverback

@@ -14,7 +14,7 @@ app = SilverbackApp()
 
 # Arbitrageur and pool contracts
 arbitrageur = Contract(os.environ["CONTRACT_ADDRESS_PAIR_ARBITRAGEUR"])
-mrglv1_pool = Contract(os.environ["CONTRACT_ADDRESS_MRGLV1_POOL"])
+mrglv1_pool = Contract(os.environ["CONTRACT_ADDRESS_MARGV1_POOL"])
 univ3_pool = Contract(mrglv1_pool.oracle())
 
 # Price diff above which execute arbitrage
