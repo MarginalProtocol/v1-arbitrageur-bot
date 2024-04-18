@@ -39,6 +39,10 @@ def _get_deadline(block: BlockAPI, context: Annotated[Context, TaskiqDepends()])
 
 @app.on_startup()
 def app_startup(startup_state: SilverbackStartupState):
+    # set up autosign if desired
+    if click.confirm("Enable autosign?"):
+        app.signer.set_autosign(enabled=True)
+
     return {"message": "Starting...", "block_number": startup_state.last_block_seen}
 
 
