@@ -7,7 +7,7 @@ from ape.api import BlockAPI
 from ape.exceptions import ContractLogicError
 from taskiq import Context, TaskiqDepends, TaskiqState
 
-from silverback import SilverbackApp, SilverbackStartupState
+from silverback import AppState, SilverbackApp
 
 # Do this to initialize your app
 app = SilverbackApp()
@@ -47,7 +47,7 @@ def _get_deadline(block: BlockAPI, context: Annotated[Context, TaskiqDepends()])
 
 
 @app.on_startup()
-def app_startup(startup_state: SilverbackStartupState):
+def app_startup(startup_state: AppState):
     # set up autosign if desired
     if click.confirm("Enable autosign?"):
         app.signer.set_autosign(enabled=True)
@@ -106,6 +106,8 @@ def exec_block(block: BlockAPI, context: Annotated[Context, TaskiqDepends()]):
             True,
         )
 
+        click.echo(f"Checking arbitrage transaction for params: {params}")
+
         # preview before sending in case of revert
         try:
             gas_cost = arbitrageur.execute.estimate_gas_cost(params, sender=app.signer)
@@ -118,7 +120,9 @@ def exec_block(block: BlockAPI, context: Annotated[Context, TaskiqDepends()]):
             click.echo(f"Amount out min with gas cost: {params[amount_out_min_index]}")
 
             # preview again in gas of revert with amount out min updated
-            click.echo("Checking can submit arbitrage transaction with params ...")
+            click.echo(
+                "Checking can submit arbitrage transaction with updated params: {params}"
+            )
             arbitrageur.execute.estimate_gas_cost(params, sender=app.signer)
 
             # fire off the transaction
