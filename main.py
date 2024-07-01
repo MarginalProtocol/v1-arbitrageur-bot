@@ -4,7 +4,7 @@ from typing import Annotated  # NOTE: Only Python 3.9+
 
 from ape import chain, Contract
 from ape.api import BlockAPI
-from ape.exceptions import ContractLogicError
+from ape.exceptions import TransactionError
 from taskiq import Context, TaskiqDepends, TaskiqState
 
 from silverback import AppState, SilverbackApp
@@ -135,9 +135,9 @@ def exec_block(block: BlockAPI, context: Annotated[Context, TaskiqDepends()]):
                 # TODO: private=TXN_PRIVATE,
             )
             context.state.arb_count += 1
-        except ContractLogicError as err:
+        except TransactionError as err:
             click.secho(
-                f"Contract logic error when estimating gas: {err}",
+                f"Transaction error when estimating gas: {err}",
                 blink=True,
                 bold=True,
             )
