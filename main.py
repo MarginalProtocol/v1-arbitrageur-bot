@@ -4,10 +4,10 @@ from typing import Annotated  # NOTE: Only Python 3.9+
 
 from ape import chain, Contract
 from ape.api import BlockAPI
-from ape.exceptions import ContractLogicError
+from ape.exceptions import TransactionError
 from taskiq import Context, TaskiqDepends, TaskiqState
 
-from silverback import SilverbackApp, SilverbackStartupState
+from silverback import AppState, SilverbackApp
 
 # Do this to initialize your app
 app = SilverbackApp()
@@ -25,11 +25,23 @@ SQRT_PRICE_TOL = os.environ.get(
 # Slippage limits when execute arbitrage
 # TODO: SQRT_PRICE_SLIPPAGE = os.environ.get("SQRT_PRICE_SLIPPAGE", 0)
 
-# Amount out minimum premium in ETH before gas costs
+# Amount out minimum premium in ETH after gas costs
 AMOUNT_OUT_MIN_ETH = os.environ.get("AMOUNT_OUT_MIN_ETH", 0)
 
 # Seconds until deadline from last block handled
 SECONDS_TIL_DEADLINE = os.environ.get("SECONDS_TIL_DEADLINE", 600)  # 10 min
+
+# Gas estimate for the arbitrageur execute function
+ARB_GAS_ESTIMATE = os.environ.get("ARB_GAS_ESTIMATE", 250000)
+
+# Buffer to add to transaction fee estimate: txn_fee *= 1 + BUFFER
+TXN_FEE_BUFFER = os.environ.get("TXN_FEE_BUFFER", 0.125)
+
+# Whether to execute transaction through private mempool
+TXN_PRIVATE = os.environ.get("TXN_PRIVATE", True)
+
+# Required confirmations to wait for transaction to go through
+TXN_REQUIRED_CONFIRMATIONS = os.environ.get("TXN_REQUIRED_CONFIRMATIONS", 1)
 
 
 # Gets the desired timestamp deadline for arbitrage execution
@@ -37,8 +49,13 @@ def _get_deadline(block: BlockAPI, context: Annotated[Context, TaskiqDepends()])
     return block.timestamp + SECONDS_TIL_DEADLINE
 
 
+# Gets the transaction fee estimate to execute the arbitrage
+def _get_txn_fee(block: BlockAPI, context: Annotated[Context, TaskiqDepends()]):
+    return int(block.base_fee * ARB_GAS_ESTIMATE * (1 + TXN_FEE_BUFFER))
+
+
 @app.on_startup()
-def app_startup(startup_state: SilverbackStartupState):
+def app_startup(startup_state: AppState):
     # set up autosign if desired
     if click.confirm("Enable autosign?"):
         app.signer.set_autosign(enabled=True)
@@ -83,33 +100,34 @@ def exec_block(block: BlockAPI, context: Annotated[Context, TaskiqDepends()]):
     if abs(r) > SQRT_PRICE_TOL:
         amount_out_min = AMOUNT_OUT_MIN_ETH
         deadline = _get_deadline(block, context)
-        params = (
+        txn_fee = _get_txn_fee(block, context)
+        params = [
             context.state.token0,
             context.state.token1,
             context.state.maintenance,
             context.state.oracle,
             app.signer.address,
             context.state.WETH9,
-            amount_out_min,
+            amount_out_min + txn_fee,
             0,  # TODO: sqrt price limit0
             0,  # TODO: sqrt price limit1
             deadline,
             True,
-        )
+        ]
 
-        click.echo(f"Submitting arbitrage transaction with params: {params}")
-
-        # preview before sending in case of revert
         try:
-            # TODO: fix this to calculate txn cost in ETH?
-            arbitrageur.execute.estimate_gas_cost(params, sender=app.signer)
-
-            # TODO: factor in gas costs ...
-            arbitrageur.execute(params, sender=app.signer)
+            # fire off the transaction
+            click.echo(f"Submitting arbitrage transaction with params: {params}")
+            arbitrageur.execute(
+                params,
+                sender=app.signer,
+                required_confirmations=TXN_REQUIRED_CONFIRMATIONS,
+                # TODO: private=TXN_PRIVATE,
+            )
             context.state.arb_count += 1
-        except ContractLogicError as err:
+        except TransactionError as err:
             click.secho(
-                f"Contract logic error when estimating gas: {err}",
+                f"Transaction error: {err}",
                 blink=True,
                 bold=True,
             )

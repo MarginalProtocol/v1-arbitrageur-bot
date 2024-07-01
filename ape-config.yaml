@@ -2,22 +2,22 @@ name: v1-arbitrageur-bot
 
 plugins:
   - name: alchemy
-    version: 0.7.1
+    version: 0.8.0
   - name: etherscan
-    version: 0.7.1
+    version: 0.8.0
   - name: solidity
-    version: 0.7.1
+    version: 0.8.2
   - name: foundry
-    version: 0.7.3
+    version: 0.8.0
   - name: arbitrum
-    version: 0.7.2
+    version: 0.8.0
   - name: base
-    version: 0.7.1
+    version: 0.8.0
 
 default_ecosystem: ethereum
 
 ethereum:
-  default_network: base
+  default_network: ethereum
   mainnet_fork:
     default_provider: foundry
 
@@ -37,10 +37,10 @@ foundry:
 dependencies:
   - name: marginal-v1-core
     github: MarginalProtocol/v1-core
-    ref: v1.0.0-rc.4
+    ref: v1.0.1
   - name: marginal-v1-periphery
     github: MarginalProtocol/v1-periphery
-    ref: v1.0.0-beta.10
+    ref: v1.0.1
 
 solidity:
   via_ir: true
