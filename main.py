@@ -38,7 +38,7 @@ ARB_GAS_ESTIMATE = os.environ.get("ARB_GAS_ESTIMATE", 250000)
 TXN_FEE_BUFFER = os.environ.get("TXN_FEE_BUFFER", 0.125)
 
 # Whether to execute transaction through private mempool
-TXN_PRIVATE = os.environ.get("TXN_PRIVATE", True)
+TXN_PRIVATE = os.environ.get("TXN_PRIVATE", False)
 
 # Required confirmations to wait for transaction to go through
 TXN_REQUIRED_CONFIRMATIONS = os.environ.get("TXN_REQUIRED_CONFIRMATIONS", 1)
@@ -122,7 +122,7 @@ def exec_block(block: BlockAPI, context: Annotated[Context, TaskiqDepends()]):
                 params,
                 sender=app.signer,
                 required_confirmations=TXN_REQUIRED_CONFIRMATIONS,
-                # TODO: private=TXN_PRIVATE,
+                private=TXN_PRIVATE,
             )
             context.state.arb_count += 1
         except TransactionError as err:
