@@ -25,11 +25,20 @@ SQRT_PRICE_TOL = os.environ.get(
 # Slippage limits when execute arbitrage
 # TODO: SQRT_PRICE_SLIPPAGE = os.environ.get("SQRT_PRICE_SLIPPAGE", 0)
 
-# Amount out minimum premium in ETH before gas costs
+# Buffer to add to gas cost estimate for transaction: gas_cost *= 1 + BUFFER
+GAS_COST_BUFFER = os.environ.get("GAS_COST_BUFFER", 0.125)
+
+# Amount out minimum premium in ETH after gas costs
 AMOUNT_OUT_MIN_ETH = os.environ.get("AMOUNT_OUT_MIN_ETH", 0)
 
 # Seconds until deadline from last block handled
 SECONDS_TIL_DEADLINE = os.environ.get("SECONDS_TIL_DEADLINE", 600)  # 10 min
+
+# Whether to execute transaction through private mempool
+TXN_PRIVATE = os.environ.get("TXN_PRIVATE", True)
+
+# Required confirmations to wait for transaction to go through
+TXN_REQUIRED_CONFIRMATIONS = os.environ.get("TXN_REQUIRED_CONFIRMATIONS", 0)
 
 
 # Gets the desired timestamp deadline for arbitrage execution
@@ -97,15 +106,29 @@ def exec_block(block: BlockAPI, context: Annotated[Context, TaskiqDepends()]):
             True,
         )
 
-        click.echo(f"Submitting arbitrage transaction with params: {params}")
-
         # preview before sending in case of revert
         try:
-            # TODO: fix this to calculate txn cost in ETH?
+            gas_cost = arbitrageur.execute.estimate_gas_cost(params, sender=app.signer)
+            gas_cost = int(gas_cost * (1 + GAS_COST_BUFFER))
+            click.echo(f"Estimated gas cost with buffer: {gas_cost}")
+
+            # update params min ETH amount out
+            amount_out_min_index = 6
+            params[amount_out_min_index] += gas_cost
+            click.echo(f"Amount out min with gas cost: {params[amount_out_min_index]}")
+
+            # preview again in gas of revert with amount out min updated
+            click.echo("Checking can submit arbitrage transaction with params ...")
             arbitrageur.execute.estimate_gas_cost(params, sender=app.signer)
 
-            # TODO: factor in gas costs ...
-            arbitrageur.execute(params, sender=app.signer)
+            # fire off the transaction
+            click.echo(f"Submitting arbitrage transaction with params: {params}")
+            arbitrageur.execute(
+                params,
+                sender=app.signer,
+                private=TXN_PRIVATE,
+                required_confirmations=TXN_REQUIRED_CONFIRMATIONS,
+            )
             context.state.arb_count += 1
         except ContractLogicError as err:
             click.secho(
