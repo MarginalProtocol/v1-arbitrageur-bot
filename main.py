@@ -38,7 +38,7 @@ TXN_FEE_BUFFER = os.environ.get("TXN_FEE_BUFFER", 0.125)
 TXN_PRIVATE = os.environ.get("TXN_PRIVATE", True)
 
 # Required confirmations to wait for transaction to go through
-TXN_REQUIRED_CONFIRMATIONS = os.environ.get("TXN_REQUIRED_CONFIRMATIONS", 0)
+TXN_REQUIRED_CONFIRMATIONS = os.environ.get("TXN_REQUIRED_CONFIRMATIONS", 1)
 
 
 # Gets the desired timestamp deadline for arbitrage execution
