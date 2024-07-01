@@ -25,14 +25,14 @@ SQRT_PRICE_TOL = os.environ.get(
 # Slippage limits when execute arbitrage
 # TODO: SQRT_PRICE_SLIPPAGE = os.environ.get("SQRT_PRICE_SLIPPAGE", 0)
 
-# Buffer to add to gas cost estimate for transaction: gas_cost *= 1 + BUFFER
-GAS_COST_BUFFER = os.environ.get("GAS_COST_BUFFER", 0.125)
-
 # Amount out minimum premium in ETH after gas costs
 AMOUNT_OUT_MIN_ETH = os.environ.get("AMOUNT_OUT_MIN_ETH", 0)
 
 # Seconds until deadline from last block handled
 SECONDS_TIL_DEADLINE = os.environ.get("SECONDS_TIL_DEADLINE", 600)  # 10 min
+
+# Buffer to add to transaction fee estimate: txn_fee *= 1 + BUFFER
+TXN_FEE_BUFFER = os.environ.get("TXN_FEE_BUFFER", 0.125)
 
 # Whether to execute transaction through private mempool
 TXN_PRIVATE = os.environ.get("TXN_PRIVATE", True)
@@ -92,7 +92,7 @@ def exec_block(block: BlockAPI, context: Annotated[Context, TaskiqDepends()]):
     if abs(r) > SQRT_PRICE_TOL:
         amount_out_min = AMOUNT_OUT_MIN_ETH
         deadline = _get_deadline(block, context)
-        params = (
+        params = [
             context.state.token0,
             context.state.token1,
             context.state.maintenance,
@@ -104,24 +104,25 @@ def exec_block(block: BlockAPI, context: Annotated[Context, TaskiqDepends()]):
             0,  # TODO: sqrt price limit1
             deadline,
             True,
-        )
+        ]
 
         click.echo(f"Checking arbitrage transaction for params: {params}")
 
         # preview before sending in case of revert
         try:
             gas_cost = arbitrageur.execute.estimate_gas_cost(params, sender=app.signer)
-            gas_cost = int(gas_cost * (1 + GAS_COST_BUFFER))
-            click.echo(f"Estimated gas cost with buffer: {gas_cost}")
+            txn_fee = block.base_fee * gas_cost
+            txn_fee = int(txn_fee * (1 + TXN_FEE_BUFFER))
+            click.echo(f"Estimated transaction fee with buffer: {txn_fee}")
 
             # update params min ETH amount out
             amount_out_min_index = 6
-            params[amount_out_min_index] += gas_cost
-            click.echo(f"Amount out min with gas cost: {params[amount_out_min_index]}")
+            params[amount_out_min_index] += txn_fee
+            click.echo(f"Amount out min with txn fee: {params[amount_out_min_index]}")
 
             # preview again in gas of revert with amount out min updated
             click.echo(
-                "Checking can submit arbitrage transaction with updated params: {params}"
+                f"Checking can submit arbitrage transaction with updated params: {params}"
             )
             arbitrageur.execute.estimate_gas_cost(params, sender=app.signer)
 
@@ -130,8 +131,8 @@ def exec_block(block: BlockAPI, context: Annotated[Context, TaskiqDepends()]):
             arbitrageur.execute(
                 params,
                 sender=app.signer,
-                private=TXN_PRIVATE,
                 required_confirmations=TXN_REQUIRED_CONFIRMATIONS,
+                # TODO: private=TXN_PRIVATE,
             )
             context.state.arb_count += 1
         except ContractLogicError as err:
