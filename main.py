@@ -5,12 +5,16 @@ from typing import Annotated  # NOTE: Only Python 3.9+
 from ape import chain, Contract
 from ape.api import BlockAPI
 from ape.exceptions import TransactionError
+from ape_aws.accounts import KmsAccount
+
 from taskiq import Context, TaskiqDepends, TaskiqState
 
 from silverback import AppState, SilverbackApp
 
+
 # Do this to initialize your app
 app = SilverbackApp()
+
 
 # Arbitrageur and pool contracts
 arbitrageur = Contract(os.environ["CONTRACT_ADDRESS_PAIR_ARBITRAGEUR"])
@@ -43,6 +47,9 @@ TXN_PRIVATE = os.environ.get("TXN_PRIVATE", False)
 # Required confirmations to wait for transaction to go through
 TXN_REQUIRED_CONFIRMATIONS = os.environ.get("TXN_REQUIRED_CONFIRMATIONS", 1)
 
+# Whether to ask to enable autosign for local account
+PROMPT_AUTOSIGN = app.signer and not isinstance(app.signer, KmsAccount)
+
 
 # Gets the desired timestamp deadline for arbitrage execution
 def _get_deadline(block: BlockAPI, context: Annotated[Context, TaskiqDepends()]):
@@ -57,7 +64,7 @@ def _get_txn_fee(block: BlockAPI, context: Annotated[Context, TaskiqDepends()]):
 @app.on_startup()
 def app_startup(startup_state: AppState):
     # set up autosign if desired
-    if click.confirm("Enable autosign?"):
+    if PROMPT_AUTOSIGN and click.confirm("Enable autosign?"):
         app.signer.set_autosign(enabled=True)
 
     return {"message": "Starting...", "block_number": startup_state.last_block_seen}
