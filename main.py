@@ -5,10 +5,15 @@ from typing import Annotated  # NOTE: Only Python 3.9+
 from ape import chain, Contract
 from ape.api import BlockAPI
 from ape.exceptions import TransactionError
+from ape_aws.accounts import KmsAccount
+
 from taskiq import Context, TaskiqDepends, TaskiqState
 
 from silverback import AppState, SilverbackApp
-from silverback.settings import Settings
+
+
+# Do this to initialize your app
+app = SilverbackApp()
 
 
 # Arbitrageur and pool contracts
@@ -42,19 +47,8 @@ TXN_PRIVATE = os.environ.get("TXN_PRIVATE", False)
 # Required confirmations to wait for transaction to go through
 TXN_REQUIRED_CONFIRMATIONS = os.environ.get("TXN_REQUIRED_CONFIRMATIONS", 1)
 
-# AWS KMS support
-AWS_KMS_ALIAS = os.environ.get("AWS_KMS_ALIAS", None)
-
 # Whether to ask to enable autosign for local account
-PROMPT_AUTOSIGN = os.environ.get("PROMPT_AUTOSIGN", True) and not AWS_KMS_ALIAS
-
-
-# Do this to initialize your app
-settings = Settings()
-if not settings.get_signer() and AWS_KMS_ALIAS:
-    settings.SIGNER_ALIAS = AWS_KMS_ALIAS
-
-app = SilverbackApp(settings=settings)
+PROMPT_AUTOSIGN = app.signer and not isinstance(app.signer, KmsAccount)
 
 
 # Gets the desired timestamp deadline for arbitrage execution

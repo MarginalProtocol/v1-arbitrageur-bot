@@ -10,7 +10,7 @@ plugins:
   - name: foundry
     version: 0.8.0
   - name: aws
-    version: 0.8.0-alpha.2
+    version: 0.8.0-alpha.3
   - name: arbitrum
     version: 0.8.0
   - name: base
