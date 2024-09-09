@@ -22,30 +22,30 @@ mrglv1_pool = Contract(os.environ["CONTRACT_ADDRESS_MARGV1_POOL"])
 univ3_pool = Contract(mrglv1_pool.oracle())
 
 # Price diff above which execute arbitrage
-SQRT_PRICE_TOL = os.environ.get(
-    "SQRT_PRICE_TOLERANCE", 25e-4
+SQRT_PRICE_TOL = float(
+    os.environ.get("SQRT_PRICE_TOLERANCE", 25e-4)
 )  # default to > 50 bps in price
 
 # Slippage limits when execute arbitrage
-# TODO: SQRT_PRICE_SLIPPAGE = os.environ.get("SQRT_PRICE_SLIPPAGE", 0)
+# TODO: SQRT_PRICE_SLIPPAGE = float(os.environ.get("SQRT_PRICE_SLIPPAGE", 0))
 
 # Amount out minimum premium in ETH after gas costs
-AMOUNT_OUT_MIN_ETH = os.environ.get("AMOUNT_OUT_MIN_ETH", 0)
+AMOUNT_OUT_MIN_ETH = int(os.environ.get("AMOUNT_OUT_MIN_ETH", 0))
 
 # Seconds until deadline from last block handled
-SECONDS_TIL_DEADLINE = os.environ.get("SECONDS_TIL_DEADLINE", 600)  # 10 min
+SECONDS_TIL_DEADLINE = int(os.environ.get("SECONDS_TIL_DEADLINE", 600))  # 10 min
 
 # Gas estimate for the arbitrageur execute function
-ARB_GAS_ESTIMATE = os.environ.get("ARB_GAS_ESTIMATE", 250000)
+ARB_GAS_ESTIMATE = int(os.environ.get("ARB_GAS_ESTIMATE", 250000))
 
 # Buffer to add to transaction fee estimate: txn_fee *= 1 + BUFFER
-TXN_FEE_BUFFER = os.environ.get("TXN_FEE_BUFFER", 0.125)
+TXN_FEE_BUFFER = float(os.environ.get("TXN_FEE_BUFFER", 0.125))
 
 # Whether to execute transaction through private mempool
 TXN_PRIVATE = os.environ.get("TXN_PRIVATE", "False") == "True"
 
 # Required confirmations to wait for transaction to go through
-TXN_REQUIRED_CONFIRMATIONS = os.environ.get("TXN_REQUIRED_CONFIRMATIONS", 1)
+TXN_REQUIRED_CONFIRMATIONS = int(os.environ.get("TXN_REQUIRED_CONFIRMATIONS", 1))
 
 # Whether to ask to enable autosign for local account
 PROMPT_AUTOSIGN = app.signer and not isinstance(app.signer, KmsAccount)
