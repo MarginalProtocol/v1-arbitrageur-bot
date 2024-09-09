@@ -42,7 +42,7 @@ ARB_GAS_ESTIMATE = os.environ.get("ARB_GAS_ESTIMATE", 250000)
 TXN_FEE_BUFFER = os.environ.get("TXN_FEE_BUFFER", 0.125)
 
 # Whether to execute transaction through private mempool
-TXN_PRIVATE = os.environ.get("TXN_PRIVATE", False)
+TXN_PRIVATE = os.environ.get("TXN_PRIVATE", "False") == "True"
 
 # Required confirmations to wait for transaction to go through
 TXN_REQUIRED_CONFIRMATIONS = os.environ.get("TXN_REQUIRED_CONFIRMATIONS", 1)

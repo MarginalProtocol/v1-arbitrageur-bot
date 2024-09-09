@@ -1,2 +1,2 @@
 eth-ape[dev]==0.8.5
-silverback==0.5.2
+silverback==0.5.7
